@@ -80,7 +80,7 @@ typedef struct XrInstanceCreateInfoAndroidKHR {
 #endif /* XR_USE_PLATFORM_ANDROID */
 
 #ifdef XR_USE_GRAPHICS_API_VULKAN
-
+#include "vulkan/vulkan_core.h"
 #define XR_KHR_vulkan_swapchain_format_list 1
 #define XR_KHR_vulkan_swapchain_format_list_SPEC_VERSION 4
 #define XR_KHR_VULKAN_SWAPCHAIN_FORMAT_LIST_EXTENSION_NAME "XR_KHR_vulkan_swapchain_format_list"
@@ -499,7 +499,7 @@ typedef struct XrGraphicsBindingEGLMNDX {
     const void* XR_MAY_ALIAS    next;
     PFNEGLGETPROCADDRESSPROC    getProcAddress;
     EGLDisplay                  display;
-    EGLConfig                   config;
+    EGLConfig                   eglConfig;
     EGLContext                  context;
 } XrGraphicsBindingEGLMNDX;
 

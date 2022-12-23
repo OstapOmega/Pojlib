@@ -30,9 +30,26 @@ LOCAL_SRC_FILES := ./OpenOVR/OCOVR.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := angle_gles2
+LOCAL_SRC_FILES := tinywrapper/angle-gles/$(TARGET_ARCH_ABI)/libGLESv2_angle.so
+include $(PREBUILT_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := angle_egl
+LOCAL_SRC_FILES := libEGL_angle.so
+include $(PREBUILT_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := tinywrapper
+LOCAL_SHARED_LIBRARIES := angle_gles2
+LOCAL_SRC_FILES := tinywrapper/main.c tinywrapper/string_utils.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/tinywrapper
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
 LOCAL_LDLIBS := -llog -landroid -lGLESv3 -lvulkan
-LOCAL_CFLAGS := -DXR_USE_PLATFORM_ANDROID -DXR_USE_GRAPHICS_API_OPENGL_ES
-LOCAL_SHARED_LIBRARIES := openxr_loader
+LOCAL_CFLAGS := -DXR_USE_PLATFORM_ANDROID -DXR_USE_GRAPHICS_API_VULKAN -DXR_USE_GRAPHICS_API_OPENGL_ES -DEGL_EGLEXT_PROTOTYPES
+LOCAL_SHARED_LIBRARIES := openxr_loader angle_egl
 LOCAL_WHOLE_STATIC_LIBRARIES := ocovr
 LOCAL_MODULE := openvr_api
         LOCAL_SRC_FILES := \
@@ -41,7 +58,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 # Link GLESv2 for test
-LOCAL_LDLIBS := -ldl -llog -landroid -lGLESv2 -lEGL
+LOCAL_LDLIBS := -ldl -llog -landroid
 # -lGLESv2
 LOCAL_MODULE := pojavexec
 # LOCAL_CFLAGS += -DDEBUG

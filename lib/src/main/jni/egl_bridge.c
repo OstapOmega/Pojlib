@@ -24,7 +24,7 @@
 EGLContext eglContext;
 EGLDisplay eglDisplay;
 EGLSurface eglSurface;
-EGLConfig config;
+EGLConfig eglConfig;
 
 /*EGL functions */
 EGLBoolean (*eglMakeCurrent_p) (EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
@@ -45,6 +45,8 @@ EGLint (*eglGetError_p) (void);
 EGLContext (*eglCreateContext_p) (EGLDisplay dpy, EGLConfig config, EGLContext share_list, const EGLint *attrib_list);
 EGLBoolean (*eglSwapInterval_p) (EGLDisplay dpy, EGLint interval);
 EGLSurface (*eglGetCurrentSurface_p) (EGLint readdraw);
+EGLDisplay (*eglGetPlatformDisplayEXT_p) (EGLenum platform, void *native_display, const EGLint *attrib_list);
+EGLBoolean (*eglQueryDeviceAttribEXT_p) (void* device, EGLint attribute, EGLAttrib *value);
 
 #define RENDERER_GL4ES 1
 
@@ -96,6 +98,8 @@ void dlsym_EGL(void* dl_handle) {
     eglSwapInterval_p = dlsym(dl_handle, "eglSwapInterval");
     eglTerminate_p = dlsym(dl_handle, "eglTerminate");
     eglGetCurrentSurface_p = dlsym(dl_handle,"eglGetCurrentSurface");
+    eglGetPlatformDisplayEXT_p = dlsym(dl_handle, "eglGetPlatformDisplayEXT");
+    eglQueryDeviceAttribEXT_p = dlsym(dl_handle, "eglQueryDeviceAttribEXT");
 }
 
 bool loadSymbols() {
@@ -138,7 +142,11 @@ int pojavInit() {
     loadSymbols();
 
     if (eglDisplay == NULL || eglDisplay == EGL_NO_DISPLAY) {
-        eglDisplay = eglGetDisplay_p(EGL_DEFAULT_DISPLAY);
+        EGLint attribs[] = {
+                0x3450, 0x320E,
+                EGL_NONE
+        };
+        eglDisplay = eglGetPlatformDisplayEXT_p(0x3202, EGL_DEFAULT_DISPLAY, attribs);
         if (eglDisplay == EGL_NO_DISPLAY) {
             printf("EGLBridge: Error eglGetDefaultDisplay() failed: %p\n", eglGetError_p());
             return 0;
@@ -160,29 +168,29 @@ int pojavInit() {
             EGL_ALPHA_SIZE, 8,
             // Minecraft required on initial 24
             EGL_DEPTH_SIZE, 24,
-            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
             EGL_NONE
     };
 
     EGLint num_configs;
     EGLint vid;
 
-    if (!eglChooseConfig_p(eglDisplay, attribs, &config, 1, &num_configs)) {
-        printf("EGLBridge: Error couldn't get an EGL visual config: %s\n", eglGetError_p());
+    if (!eglChooseConfig_p(eglDisplay, attribs, &eglConfig, 1, &num_configs)) {
+        printf("EGLBridge: Error couldn't get an EGL visual eglConfig: %s\n", eglGetError_p());
         return 0;
     }
 
-    assert(config);
+    assert(eglConfig);
     assert(num_configs > 0);
 
-    if (!eglGetConfigAttrib_p(eglDisplay, config, EGL_NATIVE_VISUAL_ID, &vid)) {
+    if (!eglGetConfigAttrib_p(eglDisplay, eglConfig, EGL_NATIVE_VISUAL_ID, &vid)) {
         printf("EGLBridge: Error eglGetConfigAttrib() failed: %s\n", eglGetError_p());
         return 0;
     }
 
-    eglBindAPI_p(EGL_OPENGL_ES_API);
+    eglBindAPI_p(EGL_OPENGL_API);
 
-    eglSurface = eglCreatePbufferSurface_p(eglDisplay, config,
+    eglSurface = eglCreatePbufferSurface_p(eglDisplay, eglConfig,
                                            NULL);
     if (!eglSurface) {
         printf("EGLBridge: Error eglCreatePbufferSurface failed: %d\n", eglGetError_p());
@@ -247,7 +255,7 @@ void pojavMakeCurrent(void* window) {
                 EGL_HEIGHT, surfaceHeight,
                 EGL_NONE
             };
-            eglSurface = eglCreatePbufferSurface(eglDisplay, config, surfaceAttr);
+            eglSurface = eglCreatePbufferSurface(eglDisplay, eglConfig, surfaceAttr);
             printf("EGLBridge: created pbuffer surface %p for context %p\n", eglSurface, window);
         }*/
         //eglContextOld = (void *) window;
@@ -283,7 +291,7 @@ Java_pojlib_util_JREUtils_getEGLContextPtr(JNIEnv *env, jclass clazz) {
 
 JNIEXPORT JNICALL jlong
 Java_pojlib_util_JREUtils_getEGLConfigPtr(JNIEnv *env, jclass clazz) {
-    return (jlong) &config;
+    return (jlong) &eglConfig;
 }
 
 /*
@@ -306,10 +314,11 @@ Java_org_lwjgl_glfw_GLFW_nativeEglDetachOnCurrentThread(JNIEnv *env, jclass claz
 
 void* pojavCreateContext(void* contextSrc) {
     const EGLint ctx_attribs[] = {
-            EGL_CONTEXT_CLIENT_VERSION, atoi(getenv("LIBGL_ES")),
+            EGL_CONTEXT_MAJOR_VERSION, 3,
+            EGL_CONTEXT_MINOR_VERSION, 1,
             EGL_NONE
     };
-    EGLContext* ctx = eglCreateContext_p(eglDisplay, config, (void*)contextSrc, ctx_attribs);
+    EGLContext* ctx = eglCreateContext_p(eglDisplay, eglConfig, (void*)contextSrc, ctx_attribs);
     eglContext = ctx;
     printf("EGLBridge: Created CTX pointer = %p\n",ctx);
     //(*env)->ThrowNew(env,(*env)->FindClass(env,"java/lang/Exception"),"Trace exception");

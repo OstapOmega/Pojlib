@@ -157,6 +157,7 @@ public class JREUtils {
         envMap.put("LIBGL_MIPMAP", "3");
         envMap.put("POJAV_RENDERER", "opengles2_gl4es");
         envMap.put("LIBGL_NOINTOVLHACK", "1");
+        envMap.put("POJAVEXEC_EGL", "libEGL_angle.so");
 
         envMap.put("LD_LIBRARY_PATH", LD_LIBRARY_PATH);
         envMap.put("PATH", activity.getFilesDir() + "/runtimes/jre-17/bin:" + Os.getenv("PATH"));
@@ -202,7 +203,7 @@ public class JREUtils {
         userArgs.add("-Xmx" + 2048 + "M");
         userArgs.add("-Dorg.lwjgl.opengl.libname=" + graphicsLib);
         userArgs.add("-Dorg.lwjgl.opengles.libname=" + "/system/lib64/libGLESv3.so");
-        userArgs.add("-Dorg.lwjgl.egl.libname=" + "/system/lib64/libEGL.so");
+        userArgs.add("-Dorg.lwjgl.egl.libname=libEGL_angle.so");
         userArgs.add("-Dfabric.addMods=" + Constants.MC_DIR + "/mods/" + versionName);
 
         userArgs.addAll(JVMArgs);
@@ -304,7 +305,7 @@ public class JREUtils {
      * @return The name of the loaded library
      */
     public static String loadGraphicsLibrary(){
-        return "libgl4es_114.so";
+        return "libtinywrapper.so";
     }
 
     public static native long getEGLContextPtr();

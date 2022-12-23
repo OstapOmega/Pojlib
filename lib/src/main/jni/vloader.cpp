@@ -3,12 +3,14 @@
 //
 #include <thread>
 #include <string>
-#include <errno.h>
+#include <cerrno>
 #include <fcntl.h>
 #include <unistd.h>
 #include <OpenOVR/openxr_platform.h>
 #include <jni.h>
+#include <dlfcn.h>
 #include "log.h"
+#include "egl.h"
 
 static JavaVM* jvm;
 XrInstanceCreateInfoAndroidKHR* OpenComposite_Android_Create_Info;
@@ -61,14 +63,17 @@ Java_pojlib_util_VLoader_setAndroidInitInfo(JNIEnv *env, jclass clazz, jobject c
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_org_vivecraft_provider_VLoader_exportVkImageFromEGL(JNIEnv* env, jclass clazz, jlong dpy, jlong image, jlong vk_image, jlong create_info) {
+    if(!eglExportVkImageANGLE(reinterpret_cast<EGLDisplay>(dpy), reinterpret_cast<void *>(image),
+                          reinterpret_cast<void *>(&vk_image), reinterpret_cast<void *>(&create_info))) {
+        printf("EGLBridge: Error eglExportVkImageANGLE() failed: %p\n", eglGetError());
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_pojlib_util_VLoader_setEGLGlobal(JNIEnv* env, jclass clazz, jlong ctx, jlong display, jlong cfg) {
-    OpenComposite_Android_GLES_Binding_Info = new XrGraphicsBindingOpenGLESAndroidKHR {
-            XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR,
-            nullptr,
-            (void*)display,
-            (void*)cfg,
-            (void*)ctx
-    };
+
 }
 
 static std::string load_file(const char *path) {
